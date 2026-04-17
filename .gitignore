@@ -1,0 +1,32 @@
+node_modules
+dist
+build
+.env
+.env.*
+!.env.example
+frontend/dist
+backend/dist
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+*.log
+
+# Environment files in app folders
+backend/.env
+frontend/.env
+
+# Secrets and credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cert
+*.jks
+*.keystore
+*service-account*.json
+*firebase-admin*.json
+
+# Local tool/editor state
+.vscode/settings.json
+.idea/
