@@ -1,5 +1,8 @@
 import cors from 'cors';
 import express from 'express';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { connectDatabase, isDatabaseConnected } from './config/db.js';
 import { env } from './config/env.js';
 import { optionalAuth } from './middleware/auth.js';
@@ -9,8 +12,32 @@ import { memoryStore } from './storage/memory.js';
 import { createMongoStore } from './storage/mongo.js';
 
 const app = express();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
 
-app.use(cors({ origin: env.CLIENT_ORIGIN, credentials: true }));
+const allowedOrigins = (env.CORS_ORIGINS ?? env.CLIENT_ORIGIN ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    credentials: true,
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
+  })
+);
 app.use(express.json({ limit: '2mb' }));
 app.use(optionalAuth);
 
@@ -28,6 +55,19 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/music', musicRouter);
 app.use('/api/library', createLibraryRouter(env.MONGODB_URI ? createMongoStore() : memoryStore));
+
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      next();
+      return;
+    }
+
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
+  });
+}
 
 const listenOnPort = (port: number) =>
   new Promise<number>((resolve, reject) => {

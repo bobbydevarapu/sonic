@@ -30,3 +30,5 @@ SonicFlux is a motion-heavy full-stack music web app built with React, Tailwind 
 - If `MONGODB_URI` is missing, the backend falls back to in-memory storage for favorites and playlists.
 - If `YOUTUBE_API_KEY` is missing, the UI still works but actual YouTube search playback cannot resolve a video.
 - Firebase auth needs the frontend config values plus an optional admin service account for backend token verification.
+- For deployment, set `CORS_ORIGINS` in `backend/.env` to your frontend domain(s), comma-separated.
+- If `frontend/dist` exists, the backend serves the built frontend and supports SPA routes (for example `/app`).

@@ -3,7 +3,8 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
-  CLIENT_ORIGIN: z.string().default('http://localhost:5173'),
+  CLIENT_ORIGIN: z.string().optional(),
+  CORS_ORIGINS: z.string().optional(),
   MONGODB_URI: z.string().optional(),
   YOUTUBE_API_KEY: z.string().optional(),
   LASTFM_API_KEY: z.string().optional(),
