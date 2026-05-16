@@ -1,15 +1,17 @@
 import {
-    createUserWithEmailAndPassword,
-    onAuthStateChanged,
-    sendPasswordResetEmail,
-    signInWithEmailAndPassword,
-    signInWithPopup,
-    signOut,
-    type User
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  type Auth,
+  type AuthProvider,
+  type User
 } from 'firebase/auth';
 import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import { saveProfile } from '../lib/api';
-import { auth, googleProvider } from '../lib/firebase';
+import { auth, firebaseInitError, googleProvider, isFirebaseAuthReady } from '../lib/firebase';
 
 interface AuthContextValue {
   user: User | null;
@@ -27,36 +29,66 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => onAuthStateChanged(auth, async (nextUser) => {
-    setUser(nextUser);
-    setLoading(false);
+  const throwUnavailableAuth = () => {
+    throw new Error(firebaseInitError ?? 'Firebase authentication is not configured for this environment');
+  };
 
-    if (nextUser) {
-      await saveProfile({
-        userId: nextUser.uid,
-        email: nextUser.email ?? undefined,
-        displayName: nextUser.displayName ?? undefined,
-        photoURL: nextUser.photoURL ?? undefined
-      });
+  const requireAuth = (): Auth => {
+    if (!auth || !isFirebaseAuthReady) {
+      throwUnavailableAuth();
     }
-  }), []);
+
+    return auth as Auth;
+  };
+
+  useEffect(() => {
+    if (!auth || !isFirebaseAuthReady) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    return onAuthStateChanged(auth, async (nextUser) => {
+      setUser(nextUser);
+      setLoading(false);
+
+      if (nextUser) {
+        await saveProfile({
+          userId: nextUser.uid,
+          email: nextUser.email ?? undefined,
+          displayName: nextUser.displayName ?? undefined,
+          photoURL: nextUser.photoURL ?? undefined
+        });
+      }
+    });
+  }, []);
 
   const value = useMemo<AuthContextValue>(() => ({
     user,
     loading,
     signIn: async (email, password) => {
-      await signInWithEmailAndPassword(auth, email, password);
+      const authClient = requireAuth();
+      await signInWithEmailAndPassword(authClient, email, password);
     },
     signUp: async (email, password) => {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const authClient = requireAuth();
+      await createUserWithEmailAndPassword(authClient, email, password);
     },
     signInWithGoogle: async () => {
-      await signInWithPopup(auth, googleProvider);
+      const authClient = requireAuth();
+      if (!googleProvider || !isFirebaseAuthReady) {
+        throwUnavailableAuth();
+      }
+      await signInWithPopup(authClient, googleProvider as AuthProvider);
     },
     resetPassword: async (email) => {
-      await sendPasswordResetEmail(auth, email);
+      const authClient = requireAuth();
+      await sendPasswordResetEmail(authClient, email);
     },
     logout: async () => {
+      if (!auth || !isFirebaseAuthReady) {
+        return;
+      }
       await signOut(auth);
     }
   }), [loading, user]);

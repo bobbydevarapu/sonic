@@ -1,5 +1,5 @@
-import { getApps, initializeApp } from 'firebase/app';
-import { GoogleAuthProvider, getAuth } from 'firebase/auth';
+import { getApps, initializeApp, type FirebaseApp } from 'firebase/app';
+import { GoogleAuthProvider, getAuth, type Auth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -10,9 +10,24 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID
 };
 
-const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+const requiredFirebaseConfig = ['apiKey', 'authDomain', 'projectId', 'appId'] as const;
 
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
+export const isFirebaseConfigured = requiredFirebaseConfig.every((key) => Boolean(firebaseConfig[key]));
 
-export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId && firebaseConfig.appId);
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let googleProvider: GoogleAuthProvider | null = null;
+let firebaseInitError: string | null = null;
+
+if (isFirebaseConfigured) {
+  try {
+    app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    googleProvider = new GoogleAuthProvider();
+  } catch (error) {
+    firebaseInitError = error instanceof Error ? error.message : 'Failed to initialize Firebase';
+  }
+}
+
+export { auth, firebaseInitError, googleProvider };
+export const isFirebaseAuthReady = Boolean(auth && googleProvider && !firebaseInitError);

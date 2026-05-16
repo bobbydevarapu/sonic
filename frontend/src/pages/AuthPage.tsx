@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { saveProfile } from '../lib/api';
-import { isFirebaseConfigured } from '../lib/firebase';
+import { firebaseInitError, isFirebaseAuthReady, isFirebaseConfigured } from '../lib/firebase';
 
 export default function AuthPage() {
   const { user, signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
@@ -73,9 +73,9 @@ export default function AuthPage() {
 
             <section className="auth-right-panel rounded-[1.8rem] border border-slate-900/30 bg-white p-3 sm:p-4">
               <div className="auth-right-top rounded-[1.45rem] border border-white/10 p-3 sm:p-4">
-                {!isFirebaseConfigured ? (
+                {!isFirebaseConfigured || !isFirebaseAuthReady ? (
                   <div className="mb-4 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-3 text-xs text-amber-100">
-                    Firebase environment variables are not configured yet.
+                    {firebaseInitError ?? 'Firebase environment variables are not configured yet.'}
                   </div>
                 ) : null}
 
@@ -172,7 +172,7 @@ export default function AuthPage() {
 
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !isFirebaseAuthReady}
                     className="auth-primary-btn inline-flex w-full items-center justify-center gap-2 rounded-full bg-cyan-300 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-70"
                   >
                     {loading ? <LoaderCircle size={16} className="animate-spin" /> : <LogIn size={16} />}
@@ -190,9 +190,10 @@ export default function AuthPage() {
                     await signInWithGoogle();
                     navigate('/app');
                   }}
+                  disabled={!isFirebaseAuthReady}
                   aria-label="Continue with Google"
                   title="Continue with Google"
-                  className="google-round-btn"
+                  className="google-round-btn disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <img src="/google.png" alt="Google" className="google-round-icon" />
                 </button>

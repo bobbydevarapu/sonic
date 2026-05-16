@@ -4,7 +4,7 @@ import type { GenreItem, MusicPlaylist, MusicTrack, UserProfile, YouTubeSearchRe
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
 async function getAuthHeaders() {
-  const user = auth.currentUser;
+  const user = auth?.currentUser ?? null;
   const token = user ? await user.getIdToken() : null;
   return token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': 'guest' };
 }
